@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="tl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>To-Do List App</title>
+
+  <style>
+    /* ===== Pangkalahatang styling ===== */
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 40px 16px;
+      background: #eef2f1;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: #1f2d2a;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 460px;
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: 0 6px 24px rgba(20, 50, 44, 0.12);
+    }
+
+    h1 { margin: 0 0 16px; font-size: 1.6rem; }
+
+    /* ===== Input at Add button ===== */
+    .add-row { display: flex; gap: 8px; }
+
+    #taskInput {
+      flex: 1;
+      padding: 10px 12px;
+      font-size: 1rem;
+      border: 2px solid #c9d6d2;
+      border-radius: 8px;
+    }
+    #taskInput:focus { outline: none; border-color: #1b7f6b; }
+
+    button {
+      cursor: pointer;
+      font-size: 0.9rem;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 12px;
+    }
+
+    #addButton { background: #1b7f6b; color: #fff; font-weight: bold; }
+    #addButton:hover { background: #156653; }
+
+    /* Mensahe ng error kapag blangko ang input */
+    #errorMessage { min-height: 1.2em; margin: 6px 0 0; color: #c0392b; font-size: 0.85rem; }
+
+    /* ===== Listahan ng task ===== */
+    #taskList { list-style: none; margin: 12px 0; padding: 0; }
+
+    .task-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 4px;
+      border-bottom: 1px solid #e3eae8;
+    }
+
+    .task-text { flex: 1; word-break: break-word; }
+
+    /* May guhit sa gitna ng text kapag tapos na ang task */
+    .task-item.done .task-text { text-decoration: line-through; color: #8a9a96; }
+
+    .delete-button { background: #fbe9e7; color: #c0392b; }
+    .delete-button:hover { background: #f5c9c3; }
+
+    .empty-message { color: #8a9a96; text-align: center; padding: 16px 0; }
+
+    /* ===== Bilang ng natitirang task ===== */
+    #remainingCount { margin: 0; font-size: 0.9rem; color: #4a5f5a; }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <h1>To-Do List</h1>
+
+    <!-- Input field at Add button -->
+    <div class="add-row">
+      <input type="text" id="taskInput" placeholder="Magdagdag ng bagong task..." autocomplete="off">
+      <button id="addButton">Add</button>
+    </div>
+    <p id="errorMessage"></p>
+
+    <!-- Dito ipapakita ang listahan ng mga task -->
+    <ul id="taskList"></ul>
+
+    <!-- Bilang ng task na hindi pa tapos -->
+    <p id="remainingCount"></p>
+  </div>
+
+  <script>
+    // ===== Mga reference sa HTML elements =====
+    const taskInput = document.getElementById("taskInput");
+    const addButton = document.getElementById("addButton");
+    const errorMessage = document.getElementById("errorMessage");
+    const taskList = document.getElementById("taskList");
+    const remainingCount = document.getElementById("remainingCount");
+
+    // ===== Data: array ng mga task =====
+    // Bawat task ay object: { id, text, done }
+    let tasks = [];
+    let nextTaskId = 1; // Para may unique id ang bawat task
+
+    // ===== Magdagdag ng bagong task =====
+    function addTask() {
+      const text = taskInput.value.trim(); // trim() para matanggal ang sobrang spaces
+
+      // Bawal ang blangko o spaces lang
+      if (text === "") {
+        errorMessage.textContent = "Maglagay muna ng task bago mag-add.";
+        taskInput.focus();
+        return;
+      }
+
+      errorMessage.textContent = ""; // Burahin ang error kung valid na
+      tasks.push({ id: nextTaskId++, text: text, done: false });
+
+      taskInput.value = "";  // Linisin ang input
+      taskInput.focus();
+      renderTasks();
+    }
+
+    // ===== Markahang tapos / hindi pa tapos ang task =====
+    function toggleTask(taskId) {
+      const task = tasks.find(function (item) { return item.id === taskId; });
+      if (task) {
+        task.done = !task.done; // Palitan: true <-> false
+        renderTasks();
+      }
+    }
+
+    // ===== Tanggalin ang task =====
+    function deleteTask(taskId) {
+      // Itira lang ang mga task na iba ang id
+      tasks = tasks.filter(function (item) { return item.id !== taskId; });
+      renderTasks();
+    }
+
+    // ===== Ipakita sa screen ang lahat ng task =====
+    function renderTasks() {
+      taskList.innerHTML = ""; // Burahin muna ang lumang listahan
+
+      // Mensahe kapag walang task
+      if (tasks.length === 0) {
+        const emptyItem = document.createElement("li");
+        emptyItem.className = "empty-message";
+        emptyItem.textContent = "Wala pang task. Magdagdag na!";
+        taskList.appendChild(emptyItem);
+      }
+
+      tasks.forEach(function (task) {
+        const listItem = document.createElement("li");
+        listItem.className = "task-item" + (task.done ? " done" : "");
+
+        // Checkbox para sa "Done"
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = task.done;
+        checkbox.setAttribute("aria-label", "Markahang tapos na: " + task.text);
+        checkbox.addEventListener("change", function () { toggleTask(task.id); });
+
+        // Text ng task (textContent para ligtas sa HTML injection)
+        const taskText = document.createElement("span");
+        taskText.className = "task-text";
+        taskText.textContent = task.text;
+
+        // Delete button
+        const deleteButton = document.createElement("button");
+        deleteButton.className = "delete-button";
+        deleteButton.textContent = "Delete";
+        deleteButton.addEventListener("click", function () { deleteTask(task.id); });
+
+        listItem.append(checkbox, taskText, deleteButton);
+        taskList.appendChild(listItem);
+      });
+
+      updateRemainingCount();
+    }
+
+    // ===== Bilangin ang task na hindi pa tapos =====
+    function updateRemainingCount() {
+      const remaining = tasks.filter(function (item) { return !item.done; }).length;
+      remainingCount.textContent = "Natitirang task: " + remaining;
+    }
+
+    // ===== Mga event listener =====
+    addButton.addEventListener("click", addTask);
+
+    // Enter key sa input para makapagdagdag din
+    taskInput.addEventListener("keydown", function (event) {
+      if (event.key === "Enter") {
+        addTask();
+      }
+    });
+
+    // Unang render pagbukas ng page
+    renderTasks();
+  </script>
+</body>
+</html>
